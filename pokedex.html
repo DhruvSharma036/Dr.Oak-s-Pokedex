@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokédex</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: #f3f4f6; /* Light grey background */
+            color: #1f2937; /* Dark text for contrast */
+            overflow: hidden; /* Hide scrollbars from animated background */
+        }
+        .pixel-font {
+            font-family: 'Roboto Mono', monospace;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .pokedex-hinge {
+            background: #1a202c;
+            border-left: 2px solid #4a5568;
+            border-right: 2px solid #4a5568;
+        }
+        .screen-bezel {
+            border-radius: 20px 20px 20px 80px / 20px 20px 20px 80px;
+            padding: 15px;
+            background-color: #1a202c;
+            box-shadow: inset 3px 3px 8px rgba(0,0,0,0.6);
+        }
+        @keyframes blink { 50% { opacity: 0.5; } }
+        .blinking-cursor { animation: blink 1s step-start 0s infinite; }
+
+        .led-blue { background: radial-gradient(circle at 50% 50%, #69d3ff, #009dff, #005c99); box-shadow: 0 0 10px #00bfff, 0 0 20px #00bfff, inset 0 0 5px rgba(255,255,255,0.5); }
+        .led-red { background: radial-gradient(circle at 50% 50%, #ff6969, #ff0000, #990000); box-shadow: 0 0 5px #ff0000, 0 0 10px #ff0000, inset 0 0 3px rgba(255,255,255,0.5); }
+        .led-yellow { background: radial-gradient(circle at 50% 50%, #ffff69, #ffff00, #999900); box-shadow: 0 0 5px #ffff00, 0 0 10px #ffff00, inset 0 0 3px rgba(255,255,255,0.5); }
+        .led-green { background: radial-gradient(circle at 50% 50%, #69ff69, #00ff00, #009900); box-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, inset 0 0 3px rgba(255,255,255,0.5); }
+
+        .screen-glow::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 6px 100%; pointer-events: none; z-index: 10; opacity: 0.3;
+        }
+
+        .d-pad-btn { background: linear-gradient(145deg, #4a5568, #2d3748); box-shadow: 2px 2px 4px #1a202c, -2px -2px 4px #5a677b; transition: all 0.1s ease-in-out; }
+        .d-pad-btn:active { background: #2d3748; box-shadow: inset 2px 2px 4px #1a202c, inset -2px -2px 4px #5a677b; }
+
+        #pokemon-info::-webkit-scrollbar { width: 8px; }
+        #pokemon-info::-webkit-scrollbar-track { background: #2d3748; border-radius: 4px; }
+        #pokemon-info::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+        #pokemon-info::-webkit-scrollbar-thumb:hover { background: #718096; }
+        
+        .pixelated { image-rendering: pixelated; }
+
+        @keyframes background-pan {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
+        }
+       
+        .animated-background {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background-color: #f3f4f6; /* Light grey background */
+            /* Lighter grey for the pattern to be subtle on the new background */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23d1d5db' stroke-width='1'%3E%3Ccircle cx='40' cy='40' r='18'/%3E%3Cpath d='M22 40h36'/%3E%3Ccircle cx='40' cy='40' r='5' fill='%23d1d5db'/%3E%3C/g%3E%3C/svg%3E");
+            animation: background-pan 120s linear infinite;
+        }
+
+        .silhouette { filter: brightness(0) contrast(0%) drop-shadow(0 0 5px rgba(0,255,255,0.7)); }
+        
+        .menu-option {
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+        .menu-option .card-overlay {
+            background-color: rgba(243, 244, 246, 0.7); /* Light overlay */
+            transition: background-color 0.3s ease;
+        }
+        .menu-option:hover {
+            transform: scale(1.05) translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); /* Darker shadow for light BG */
+            border-color: #ef4444; /* Red hover border */
+        }
+        .menu-option:hover .card-overlay {
+            background-color: rgba(243, 244, 246, 0.5); /* Lighter overlay on hover */
+        }
+        
+        .game-option-btn { transition: background-color 0.2s, border-color 0.2s, transform 0.2s; }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in-up {
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+
+        .title-font {
+            font-family: 'Press Start 2P', monospace;
+            -webkit-text-stroke: 4px #3b82f6; 
+            text-shadow: 0px 6px 0px #1e40af; 
+        }
+        
+        .content-fade {
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .content-fade.visible {
+            opacity: 1;
+        }
+
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="animated-background"></div>
+
+    <!-- Landing Page -->
+    <div id="landing-page" class="w-full max-w-5xl text-center flex flex-col items-center justify-center h-full">
+        <header class="w-full mb-12 fade-in-up" style="animation-delay: 0.2s;">
+             <h1 class="text-4xl md:text-6xl font-bold bg-gradient-to-b from-yellow-300 to-yellow-400 bg-clip-text text-transparent title-font">Professor Oak's Pokédex</h1>
+        </header>
+
+        <main class="w-full">
+            <p class="text-lg text-gray-600 mb-8 fade-in-up" style="animation-delay: 0.4s;">Select a Mode to Begin</p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div id="open-pokedex" class="menu-option cursor-pointer rounded-lg border-2 border-gray-300 h-64 overflow-hidden fade-in-up" 
+                     style="background-image: url('https://images.unsplash.com/photo-1613771422133-286d134c405a?q=80&w=2070&auto=format&fit=crop'); background-position: center; animation-delay: 0.6s;">
+                    <div class="card-overlay w-full h-full p-8 flex flex-col items-center justify-center text-center">
+                        <h2 class="text-3xl font-bold pixel-font text-gray-900 mt-4">DATA-DEX</h2>
+                        <p class="mt-2 text-gray-700">Browse and analyze Pokémon data from all known regions.</p>
+                    </div>
+                </div>
+                <div id="open-game" class="menu-option cursor-pointer rounded-lg border-2 border-gray-300 h-64 overflow-hidden fade-in-up" 
+                     style="background-image: url('https://images.unsplash.com/photo-1579892120489-3c35520a23fa?q=80&w=1932&auto=format&fit=crop'); background-position: center; animation-delay: 0.8s;">
+                     <div class="card-overlay w-full h-full p-8 flex flex-col items-center justify-center text-center">
+                        <h2 class="text-3xl font-bold pixel-font text-gray-900 mt-4">SHADOW SHOWDOWN</h2>
+                        <p class="mt-2 text-gray-700">Test your identification skills in this silhouette challenge.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="pokedex-app" class="hidden w-full h-full flex items-center justify-center">
+        <main class="w-full max-w-4xl h-full max-h-[800px] md:max-h-[700px] bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-2xl flex flex-col md:flex-row overflow-hidden border-4 border-gray-900/50">
+          
+            <div class="w-full md:w-1/2 p-4 flex flex-col bg-red-700/80 rounded-l-lg border-r-4 border-black/50">
+                <div class="flex items-center space-x-2 mb-4">
+                    <div class="w-16 h-16 bg-white border-4 border-black rounded-full flex items-center justify-center">
+                        <div class="w-12 h-12 led-blue rounded-full border-2 border-black"></div>
+                    </div>
+                    <div class="w-6 h-6 led-red rounded-full border-2 border-black"></div>
+                    <div class="w-6 h-6 led-yellow rounded-full border-2 border-black"></div>
+                    <div class="w-6 h-6 led-green rounded-full border-2 border-black"></div>
+                </div>
+                <div class="screen-bezel flex-grow">
+                    <div id="screen" class="w-full h-full bg-black rounded-lg shadow-inner p-4 border-2 border-gray-600 flex flex-col relative screen-glow">
+                        <div id="loading-state" class="flex flex-col items-center justify-center h-full text-center text-cyan-300 z-20">
+                            <p class="text-xl font-bold">LOADING<span class="blinking-cursor">...</span></p>
+                            <p class="text-sm mt-2">ACCESSING DATABASE...</p>
+                        </div>
+                        <div id="error-state" class="hidden flex-col items-center justify-center h-full text-center text-red-400 z-20">
+                            <p class="text-xl font-bold">ERROR!</p>
+                            <p class="text-sm mt-2">SUBJECT NOT FOUND. CHECK INPUT.</p>
+                        </div>
+                        <div id="main-content" class="hidden flex-grow flex-col z-20 content-fade">
+                            <div class="flex justify-between items-center bg-gray-900/50 text-cyan-300 px-3 py-1 rounded-t-md">
+                                <h2 id="pokemon-name" class="text-xl font-bold capitalize pixel-font"></h2>
+                                <span id="pokemon-id" class="text-lg font-bold"></span>
+                            </div>
+                            <div class="bg-gray-800/50 p-4 flex-grow flex flex-col items-center justify-center relative overflow-hidden">
+                                <img id="pokemon-image" src="" alt="Pokemon Image" class="h-40 md:h-48 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-transform duration-300 hover:scale-110">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center justify-between">
+                     <button class="back-to-menu-btn bg-gray-700 text-cyan-300 font-bold py-2 px-4 rounded-md border-2 border-black active:bg-gray-600">MENU</button>
+                    <div class="grid grid-cols-3 w-24 h-24">
+                        <div class="col-start-2 row-start-1 flex items-center justify-center"><button id="prev-btn" class="w-8 h-8 d-pad-btn rounded-t-md border-2 border-black"></button></div>
+                        <div class="col-start-1 row-start-2 flex items-center justify-center"><button id="prev-btn-2" class="w-8 h-8 d-pad-btn rounded-l-md border-2 border-black"></button></div>
+                        <div class="col-start-2 row-start-2 flex items-center justify-center"><div class="w-8 h-8 bg-gray-800 border-2 border-black"></div></div>
+                        <div class="col-start-3 row-start-2 flex items-center justify-center"><button id="next-btn-2" class="w-8 h-8 d-pad-btn rounded-r-md border-2 border-black"></button></div>
+                        <div class="col-start-2 row-start-3 flex items-center justify-center"><button id="next-btn" class="w-8 h-8 d-pad-btn rounded-b-md border-2 border-black"></button></div>
+                    </div>
+                </div>
+            </div>
+            <div class="w-full md:w-8 pokedex-hinge border-y-4 border-black/50"></div>
+            <!-- Right Panel -->
+            <div class="w-full md:w-1/2 p-4 flex flex-col bg-red-700/80 rounded-r-lg border-l-4 border-black/50">
+                <div id="info-screen" class="w-full h-full bg-gray-900 rounded-lg p-4 border-2 border-cyan-400/50 flex flex-col gap-4 text-cyan-300 font-mono text-sm shadow-[0_0_15px_rgba(0,255,255,0.3)]">
+                    <div class="relative"><input type="text" id="search-input" placeholder="SUBJECT ID OR NAME..." class="w-full bg-gray-800 border-2 border-cyan-400/50 rounded-md p-2 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300 placeholder-cyan-500/50 uppercase tracking-wider"><button id="search-btn" class="absolute right-2 top-1/2 -translate-y-1/2 bg-cyan-500 text-black px-3 py-1 rounded active:bg-cyan-700 font-bold">EXECUTE</button></div>
+                    <div id="pokemon-info" class="bg-black/30 p-3 rounded-md overflow-y-auto h-full flex flex-col content-fade">
+                        <div id="types-container" class="flex gap-2 mb-2"></div>
+                        <div id="physical-info" class="grid grid-cols-2 gap-2 mb-2"></div>
+                        <div id="stats-chart-container" class="w-full h-48 my-2"></div>
+                        <p id="pokemon-description" class="text-sm leading-relaxed mb-4"></p>
+                        <div id="evolution-container" class="mt-auto pt-2 border-t-2 border-cyan-400/20"></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button id="cry-btn" class="w-full bg-gray-700 text-cyan-300 font-bold py-2 rounded-md border-2 border-black active:bg-gray-600 flex items-center justify-center gap-2 transition-colors hover:bg-gray-600 text-xs"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>CRY</button>
+                        <button id="shiny-btn" class="w-full bg-yellow-500 text-black font-bold py-2 rounded-md border-2 border-black active:bg-yellow-600 flex items-center justify-center gap-2 transition-colors hover:bg-yellow-400 text-xs"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>VARIANT</button>
+                        <button id="speak-btn" class="w-full bg-cyan-500 text-black font-bold py-2 rounded-md border-2 border-black active:bg-cyan-700 flex items-center justify-center gap-2 transition-colors hover:bg-cyan-400 text-xs"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3.5 3.5 0 0 0-3.5 3.5v1a3.5 3.5 0 0 0 7 0v-1A3.5 3.5 0 0 0 12 2z"></path><path d="M17 10.5a5.5 5.5 0 0 1-11 0"></path><path d="M4 14v1a8 8 0 0 0 16 0v-1"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>VOCALIZE</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Game App -->
+    <div id="game-app" class="hidden w-full h-full flex items-center justify-center">
+         <main class="w-full max-w-4xl h-full max-h-[800px] md:max-h-[700px] bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-2xl flex flex-col md:flex-row overflow-hidden border-4 border-gray-900/50">
+            <!-- Left Panel (Game Screen) -->
+            <div class="w-full md:w-1/2 p-4 flex flex-col bg-gray-700/80 rounded-l-lg border-r-4 border-black/50">
+                <div class="flex items-center space-x-2 mb-4">
+                    <div class="w-16 h-16 bg-white border-4 border-black rounded-full flex items-center justify-center"><div class="w-12 h-12 led-blue rounded-full border-2 border-black"></div></div>
+                    <h2 class="text-2xl text-cyan-300 pixel-font">SHADOW SHOWDOWN</h2>
+                </div>
+                <div class="screen-bezel flex-grow">
+                    <div id="game-screen" class="w-full h-full bg-black rounded-lg shadow-inner p-4 border-2 border-gray-600 flex flex-col relative screen-glow items-center justify-center">
+                        <img id="game-pokemon-image" src="" alt="Who's that Pokemon?" class="h-48 md:h-64 transition-all duration-500">
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center justify-between">
+                     <button class="back-to-menu-btn bg-gray-700 text-cyan-300 font-bold py-2 px-4 rounded-md border-2 border-black active:bg-gray-600">MENU</button>
+                     <p id="game-feedback" class="text-xl pixel-font"></p>
+                </div>
+            </div>
+            <div class="w-full md:w-8 pokedex-hinge border-y-4 border-black/50"></div>
+            <!-- Right Panel (Game Controls) -->
+            <div class="w-full md:w-1/2 p-4 flex flex-col bg-gray-700/80 rounded-r-lg border-l-4 border-black/50">
+                <div class="w-full h-full bg-gray-900 rounded-lg p-4 border-2 border-cyan-400/50 flex flex-col gap-4 text-cyan-300 font-mono text-sm shadow-[0_0_15px_rgba(0,255,255,0.3)]">
+                    <div class="flex justify-between items-center text-center">
+                        <h3 class="text-sm">SCORE: <span id="game-score" class="font-bold text-xl">0</span></h3>
+                        <h3 class="text-sm">HIGH SCORE: <span id="game-high-score" class="font-bold text-xl">0</span></h3>
+                    </div>
+                    <div id="game-instructions" class="text-center bg-black/30 p-3 rounded-md">
+                        <p class="text-2xl font-bold pixel-font text-cyan-300">WHO'S THAT POKéMON?</p>
+                        <p class="mt-2">GUESS THE POKéMON FROM ITS SILHOUETTE.</p>
+                    </div>
+                    <div id="game-options" class="grid grid-cols-2 gap-4 flex-grow content-center">
+                      
+                    </div>
+                     <div class="flex gap-2 justify-center">
+                        <button id="read-more-btn" class="hidden w-1/2 bg-indigo-500 text-white font-bold py-2 px-4 rounded-md border-2 border-black active:bg-indigo-600 text-xs">POKéDEX ENTRY</button>
+                        <button id="next-round-btn" class="hidden w-1/2 bg-yellow-500 text-black font-bold py-2 px-4 rounded-md border-2 border-black active:bg-yellow-600 text-xs">NEXT ROUND</button>
+                        <button id="new-game-btn" class="w-1/2 bg-cyan-500 text-black font-bold py-2 px-4 rounded-md border-2 border-black active:bg-cyan-700">NEW GAME</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const landingPage = document.getElementById('landing-page');
+            const pokedexApp = document.getElementById('pokedex-app');
+            const gameApp = document.getElementById('game-app');
+            
+            const openPokedexBtn = document.getElementById('open-pokedex');
+            const openGameBtn = document.getElementById('open-game');
+            const backToMenuBtns = document.querySelectorAll('.back-to-menu-btn');
+
+            const showPage = (page) => {
+                landingPage.classList.add('hidden');
+                pokedexApp.classList.add('hidden');
+                gameApp.classList.add('hidden');
+                page.classList.remove('hidden');
+            };
+            
+            openPokedexBtn.addEventListener('click', () => {
+                showPage(pokedexApp);
+                if (!currentPokemonData) getPokemonData(currentPokemonId);
+            });
+
+            openGameBtn.addEventListener('click', () => {
+                showPage(gameApp);
+                if (!gameActive) startNewGame();
+            });
+
+            backToMenuBtns.forEach(btn => {
+                btn.addEventListener('click', () => showPage(landingPage));
+            });
+
+        
+            const mainContent = document.getElementById('main-content');
+            const pokemonInfoContainer = document.getElementById('pokemon-info');
+            const loadingState = document.getElementById('loading-state');
+            const errorState = document.getElementById('error-state');
+            const pokemonNameEl = document.getElementById('pokemon-name');
+            const pokemonIdEl = document.getElementById('pokemon-id');
+            const pokemonImageEl = document.getElementById('pokemon-image');
+            const typesContainer = document.getElementById('types-container');
+            const physicalInfoContainer = document.getElementById('physical-info');
+            const statsChartContainer = document.getElementById('stats-chart-container');
+            const pokemonDescriptionEl = document.getElementById('pokemon-description');
+            const evolutionContainer = document.getElementById('evolution-container');
+            const searchInput = document.getElementById('search-input');
+            const searchBtn = document.getElementById('search-btn');
+            const prevBtn = document.getElementById('prev-btn'), nextBtn = document.getElementById('next-btn');
+            const prevBtn2 = document.getElementById('prev-btn-2'), nextBtn2 = document.getElementById('next-btn-2');
+            const cryBtn = document.getElementById('cry-btn'), shinyBtn = document.getElementById('shiny-btn'), speakBtn = document.getElementById('speak-btn');
+            
+            let currentPokemonId = 1;
+            let currentPokemonData = null;
+            let isShiny = false;
+
+            const typeColors = { normal: 'bg-gray-400', fire: 'bg-red-500', water: 'bg-blue-500', electric: 'bg-yellow-400', grass: 'bg-green-500', ice: 'bg-cyan-300', fighting: 'bg-orange-700', poison: 'bg-purple-600', ground: 'bg-yellow-600', flying: 'bg-indigo-400', psychic: 'bg-pink-500', bug: 'bg-lime-500', rock: 'bg-yellow-700', ghost: 'bg-indigo-800', dragon: 'bg-indigo-600', dark: 'bg-gray-700', steel: 'bg-gray-500', fairy: 'bg-pink-300' };
+
+            let synth = null;
+            async function playSound(note, duration) {
+                try {
+                    if (synth === null && typeof Tone !== 'undefined') {
+                        await Tone.start();
+                        synth = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.1 } }).toDestination();
+                    }
+                    if (synth) synth.triggerAttackRelease(note, duration);
+                } catch (e) { console.error("Could not play sound.", e); synth = false; }
+            }
+            
+            const playCry = (pokemon) => {
+                if (pokemon?.cries?.latest) {
+                    const cry = new Audio(pokemon.cries.latest);
+                    cry.volume = 0.3;
+                    cry.play();
+                }
+            };
+
+            const getPokemonData = async (identifier) => {
+                showLoadingState();
+                try {
+                    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${identifier}`);
+                    if (!res.ok) throw new Error('Pokemon not found');
+                    const pokemonData = await res.json();
+                    const speciesRes = await fetch(pokemonData.species.url);
+                    const speciesData = await speciesRes.json();
+                    const evolutionRes = await fetch(speciesData.evolution_chain.url);
+                    const evolutionData = await evolutionRes.json();
+
+                    currentPokemonId = pokemonData.id;
+                    currentPokemonData = pokemonData;
+                    isShiny = false;
+                    
+                    displayPokemonData(pokemonData, speciesData, evolutionData);
+                    showMainContent();
+                    playCry(pokemonData);
+                } catch (error) { console.error("Failed to fetch Pokémon data:", error); showErrorState(); }
+            };
+            
+            const displayPokemonData = (pokemon, species, evolutionChain) => {
+                pokemonNameEl.textContent = pokemon.name;
+                pokemonIdEl.textContent = `#${String(pokemon.id).padStart(3, '0')}`;
+                pokemonImageEl.src = pokemon.sprites.other['official-artwork'].front_default || pokemon.sprites.front_default;
+                
+                typesContainer.innerHTML = '<strong>Types:</strong>' + pokemon.types.map(t => `<span class="px-2 py-1 ${typeColors[t.type.name] || 'bg-gray-400'} text-white text-xs font-bold rounded capitalize">${t.type.name}</span>`).join('');
+                physicalInfoContainer.innerHTML = `<div><strong>Height:</strong> ${pokemon.height / 10} m</div><div><strong>Weight:</strong> ${pokemon.weight / 10} kg</div>`;
+                
+                createRadarChart(pokemon.stats);
+
+                const flavorText = species.flavor_text_entries.find(e => e.language.name === 'en');
+                pokemonDescriptionEl.textContent = flavorText ? flavorText.flavor_text.replace(/[\n\f\r]/g, ' ') : 'No description.';
+                
+                displayEvolutionChain(evolutionChain.chain);
+            };
+
+            const createRadarChart = (stats) => {
+                const statOrder = ["hp", "attack", "defense", "special-attack", "special-defense", "speed"];
+                const statValues = statOrder.map(statName => {
+                    const foundStat = stats.find(s => s.stat.name === statName);
+                    return foundStat ? foundStat.base_stat : 0;
+                });
+                const labels = ["HP", "ATK", "DEF", "S.ATK", "S.DEF", "SPD"];
+                const maxStat = 200;
+                
+                const width = statsChartContainer.clientWidth;
+                const height = statsChartContainer.clientHeight;
+                const center = { x: width / 2, y: height / 2 };
+                const radius = Math.min(width, height) / 2 * 0.7;
+
+                let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
+                
+              
+                for (let i = 1; i <= 4; i++) {
+                    const r = radius * (i / 4);
+                    let points = [];
+                    for (let j = 0; j < 6; j++) {
+                        const angle = Math.PI / 3 * j - Math.PI / 2;
+                        points.push(`${center.x + r * Math.cos(angle)},${center.y + r * Math.sin(angle)}`);
+                    }
+                    svg += `<polygon points="${points.join(' ')}" fill="none" stroke="#4a5568" stroke-width="0.5"/>`;
+                }
+
+                for (let i = 0; i < 6; i++) {
+                    const angle = Math.PI / 3 * i - Math.PI / 2;
+                    const end = { x: center.x + radius * Math.cos(angle), y: center.y + radius * Math.sin(angle) };
+                    svg += `<line x1="${center.x}" y1="${center.y}" x2="${end.x}" y2="${end.y}" stroke="#4a5568" stroke-width="0.5"/>`;
+                    const labelPos = { x: center.x + (radius + 15) * Math.cos(angle), y: center.y + (radius + 15) * Math.sin(angle) };
+                    svg += `<text x="${labelPos.x}" y="${labelPos.y}" fill="#9ca3af" font-size="10" text-anchor="middle" dominant-baseline="middle">${labels[i]}</text>`;
+                }
+
+            
+                let statPoints = [];
+                for (let i = 0; i < 6; i++) {
+                    const value = statValues[i];
+                    const r = radius * (value / maxStat);
+                    const angle = Math.PI / 3 * i - Math.PI / 2;
+                    statPoints.push(`${center.x + r * Math.cos(angle)},${center.y + r * Math.sin(angle)}`);
+                }
+                svg += `<polygon points="${statPoints.join(' ')}" fill="rgba(0, 255, 255, 0.4)" stroke="#00ffff" stroke-width="1.5"/>`;
+                svg += `</svg>`;
+                statsChartContainer.innerHTML = svg;
+            };
+
+            const displayEvolutionChain = async (chain) => {
+                evolutionContainer.innerHTML = '<strong class="mb-2 block">Evolutionary Line:</strong><div id="evo-chain-visual" class="flex items-center justify-around gap-2 flex-wrap"></div>';
+                const evoChainVisual = document.getElementById('evo-chain-visual');
+                evoChainVisual.innerHTML = '';
+                let currentStage = chain;
+                while (currentStage) {
+                    const id = currentStage.species.url.split('/').filter(Boolean).pop();
+                    const evoDiv = document.createElement('div');
+                    evoDiv.className = 'text-center';
+                    evoDiv.innerHTML = `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png" alt="${currentStage.species.name}" class="w-16 h-16 pixelated mx-auto"><p class="text-xs capitalize">${currentStage.species.name}</p>`;
+                    evoChainVisual.appendChild(evoDiv);
+
+                    if (currentStage.evolves_to.length > 0) {
+                        const arrow = document.createElement('div');
+                        arrow.className = 'text-2xl font-bold text-cyan-400/50';
+                        arrow.innerHTML = currentStage.evolves_to.length > 1 ? '+' : '&rarr;';
+                        evoChainVisual.appendChild(arrow);
+                        currentStage = currentStage.evolves_to[0];
+                    } else { currentStage = null; }
+                }
+            }
+
+            function showLoadingState() { 
+                mainContent.classList.remove('visible'); pokemonInfoContainer.classList.remove('visible');
+                loadingState.classList.remove('hidden'); loadingState.classList.add('flex'); errorState.classList.add('hidden'); 
+            }
+            function showErrorState() { errorState.classList.remove('hidden'); errorState.classList.add('flex'); loadingState.classList.add('hidden'); }
+            function showMainContent() { 
+                loadingState.classList.add('hidden'); errorState.classList.add('hidden');
+                mainContent.classList.remove('hidden'); mainContent.classList.add('flex');
+                setTimeout(() => { 
+                    mainContent.classList.add('visible'); 
+                    pokemonInfoContainer.classList.add('visible'); 
+                }, 50);
+            }
+            
+            const speakDescription = () => {
+                if ('speechSynthesis' in window && pokemonDescriptionEl.textContent) {
+                    speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(pokemonDescriptionEl.textContent);
+                    const voices = speechSynthesis.getVoices();
+                    utterance.voice = voices.find(v => v.name === 'Google UK English Female') || voices.find(v => v.lang.startsWith('en-'));
+                    utterance.pitch = 1.8; utterance.rate = 1.1; utterance.volume = 0.8;
+                    speechSynthesis.speak(utterance); playSound('F5', '8n');
+                }
+            };
+            const handleSearch = () => { if (searchInput.value) getPokemonData(searchInput.value.trim().toLowerCase()); playSound('C5', '8n'); };
+            searchBtn.addEventListener('click', handleSearch);
+            searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSearch(); });
+            const navigate = (dir) => { let newId = currentPokemonId + dir; if (newId < 1) newId = 1; if (newId > 1025) newId = 1025; getPokemonData(newId); playSound('C4', '16n'); };
+            [prevBtn, prevBtn2].forEach(b => b.addEventListener('click', () => navigate(-1)));
+            [nextBtn, nextBtn2].forEach(b => b.addEventListener('click', () => navigate(1)));
+            cryBtn.addEventListener('click', () => playCry(currentPokemonData));
+            shinyBtn.addEventListener('click', () => { if (!currentPokemonData) return; isShiny = !isShiny; playSound('G5', '16n'); pokemonImageEl.src = isShiny ? currentPokemonData.sprites.other['official-artwork'].front_shiny : currentPokemonData.sprites.other['official-artwork'].front_default; });
+            speakBtn.addEventListener('click', speakDescription);
+
+            // --- Section: GAME ---
+            const gameImageEl = document.getElementById('game-pokemon-image');
+            const gameOptionsContainer = document.getElementById('game-options');
+            const gameScoreEl = document.getElementById('game-score');
+            const gameHighScoreEl = document.getElementById('game-high-score');
+            const gameFeedbackEl = document.getElementById('game-feedback');
+            const newGameBtn = document.getElementById('new-game-btn');
+            const nextRoundBtn = document.getElementById('next-round-btn');
+            const readMoreBtn = document.getElementById('read-more-btn');
+            
+            let score = 0, highScore = 0, gameActive = false, correctAnswer = null;
+            const POKEMON_COUNT = 898;
+            const HIGH_SCORE_KEY = 'pokedexHighScore';
+
+            const loadHighScore = () => {
+                highScore = parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0');
+                gameHighScoreEl.textContent = highScore;
+            };
+
+            const startNewGame = () => {
+                score = 0; gameScoreEl.textContent = score;
+                gameActive = true;
+                newGameBtn.classList.add('hidden');
+                loadNewRound();
+            };
+
+            const loadNewRound = async () => {
+                gameFeedbackEl.textContent = '...';
+                nextRoundBtn.classList.add('hidden');
+                readMoreBtn.classList.add('hidden');
+                gameOptionsContainer.innerHTML = '<p class="text-center col-span-2">GENERATING CHALLENGE...</p>';
+                gameImageEl.classList.add('silhouette');
+
+                let optionIds = [];
+                const correctId = Math.floor(Math.random() * POKEMON_COUNT) + 1;
+                optionIds.push(correctId);
+                while(optionIds.length < 4) {
+                    const randomId = Math.floor(Math.random() * POKEMON_COUNT) + 1;
+                    if (!optionIds.includes(randomId)) optionIds.push(randomId);
+                }
+                
+                try {
+                    const pokemonOptions = await Promise.all(optionIds.map(id => fetch(`https://pokeapi.co/api/v2/pokemon/${id}`).then(res => res.json())));
+                    correctAnswer = pokemonOptions[0];
+                    gameImageEl.src = correctAnswer.sprites.other['official-artwork'].front_default;
+                    
+                    for (let i = pokemonOptions.length - 1; i > 0; i--) { // Shuffle
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [pokemonOptions[i], pokemonOptions[j]] = [pokemonOptions[j], pokemonOptions[i]];
+                    }
+
+                    gameOptionsContainer.innerHTML = pokemonOptions.map(p => 
+                        `<button data-name="${p.name}" class="game-option-btn w-full bg-gray-700 text-cyan-300 font-bold py-4 rounded-md border-2 border-black active:bg-gray-600 hover:bg-gray-600 capitalize text-lg">${p.name}</button>`
+                    ).join('');
+                } catch (error) { console.error("Failed to load game round:", error); gameFeedbackEl.textContent = "API ERROR"; }
+            };
+            
+            const handleGuess = (e) => {
+                const button = e.target.closest('.game-option-btn');
+                if (!button || !gameActive) return;
+                gameActive = false; 
+                
+                const guessedName = button.dataset.name;
+                gameImageEl.classList.remove('silhouette');
+                playCry(correctAnswer);
+                
+                document.querySelectorAll('.game-option-btn').forEach(btn => {
+                    btn.disabled = true;
+                    if (btn.dataset.name === correctAnswer.name) {
+                        btn.classList.add('!bg-green-500', '!border-white'); // Correct answer
+                    }
+                });
+
+                if (guessedName === correctAnswer.name) {
+                    score++; gameScoreEl.textContent = score;
+                    gameFeedbackEl.textContent = 'CORRECT!';
+                    gameFeedbackEl.classList.add('text-green-500'); gameFeedbackEl.classList.remove('text-red-500');
+                    playSound('C5', '8n');
+                } else {
+                    const correctName = correctAnswer.name.charAt(0).toUpperCase() + correctAnswer.name.slice(1);
+                    gameFeedbackEl.innerHTML = `WRONG! <br> It's ${correctName}!`;
+                    gameFeedbackEl.classList.add('text-red-500'); gameFeedbackEl.classList.remove('text-green-500');
+                    button.classList.add('!bg-red-500', '!border-white'); // Mark wrong guess
+                    playSound('C3', '8n');
+                }
+                
+                
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem(HIGH_SCORE_KEY, highScore);
+                    gameHighScoreEl.textContent = highScore;
+                }
+
+                readMoreBtn.classList.remove('hidden');
+                nextRoundBtn.classList.remove('hidden');
+                newGameBtn.classList.remove('hidden');
+            };
+
+            readMoreBtn.addEventListener('click', () => {
+                if(correctAnswer) {
+                    showPage(pokedexApp);
+                    getPokemonData(correctAnswer.id);
+                }
+            });
+            
+            nextRoundBtn.addEventListener('click', () => { gameActive = true; loadNewRound(); });
+            newGameBtn.addEventListener('click', startNewGame);
+            gameOptionsContainer.addEventListener('click', handleGuess);
+
+            // Initial Load
+            loadHighScore();
+        });
+    </script>
+</body>
+</html>
+
