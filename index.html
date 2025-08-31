@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pokédex</title>
+    <title>Pokédex Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
             font-family: 'Roboto Mono', monospace;
             background-color: #f3f4f6;
             color: #1f2937;
-            overflow: hidden;
+            overflow-x: hidden;
         }
         .pixel-font {
             font-family: 'Roboto Mono', monospace;
@@ -30,8 +30,6 @@
         }
         .pokedex-hinge {
             background: #1a202c;
-            border-left: 2px solid #4a5568;
-            border-right: 2px solid #4a5568;
         }
         .screen-bezel {
             border-radius: 20px 20px 20px 80px / 20px 20px 20px 80px;
@@ -69,7 +67,7 @@
         }
        
         .animated-background {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1;
             background-color: #f3f4f6;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23d1d5db' stroke-width='1'%3E%3Ccircle cx='40' cy='40' r='18'/%3E%3Cpath d='M22 40h36'/%3E%3Ccircle cx='40' cy='40' r='5' fill='%23d1d5db'/%3E%3C/g%3E%3C/svg%3E");
             animation: background-pan 120s linear infinite;
@@ -122,17 +120,17 @@
 
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
     <div class="animated-background"></div>
 
     <div id="landing-page" class="w-full max-w-5xl text-center flex flex-col items-center justify-center h-full">
         <header class="w-full mb-12 fade-in-up" style="animation-delay: 0.2s;">
-             <h1 class="text-4xl md:text-6xl font-bold bg-gradient-to-b from-yellow-300 to-yellow-400 bg-clip-text text-transparent title-font">Professor Oak's Pokédex</h1>
+             <h1 class="text-4xl md:text-6xl font-bold bg-gradient-to-b from-yellow-300 to-yellow-400 bg-clip-text text-transparent title-font">Pokédex Pro</h1>
         </header>
 
         <main class="w-full">
             <p class="text-lg text-gray-600 mb-8 fade-in-up" style="animation-delay: 0.4s;">Select a Mode to Begin</p>
-            <div class="grid md:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div id="open-pokedex" class="menu-option cursor-pointer rounded-lg border-2 border-gray-300 h-64 overflow-hidden fade-in-up" 
                      style="background-image: url('https://images.unsplash.com/photo-1613771422133-286d134c405a?q=80&w=2070&auto=format&fit=crop'); background-position: center; animation-delay: 0.6s;">
                     <div class="card-overlay w-full h-full p-8 flex flex-col items-center justify-center text-center">
@@ -151,34 +149,33 @@
         </main>
     </div>
 
-    <div id="pokedex-app" class="hidden w-full h-full flex items-center justify-center">
-        <main class="w-full max-w-4xl h-full max-h-[800px] md:max-h-[700px] bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-2xl flex flex-col md:flex-row overflow-hidden border-4 border-gray-900/50">
-            <div class="w-full md:w-1/2 p-4 flex flex-col bg-red-700/80 rounded-l-lg border-r-4 border-black/50">
+    <div id="pokedex-app" class="hidden w-full max-w-4xl">
+        <main class="w-full bg-gradient-to-br from-red-800 to-red-900 rounded-xl shadow-2xl flex flex-col md:flex-row overflow-hidden border-4 border-gray-900/50 my-8">
+            <div class="w-full md:w-1/2 p-4 flex flex-col bg-red-700/80 rounded-l-lg">
                 <div class="flex items-center space-x-2 mb-4">
-                    <div class="w-16 h-16 bg-white border-4 border-black rounded-full flex items-center justify-center">
-                        <div class="w-12 h-12 led-blue rounded-full border-2 border-black"></div>
+                    <div class="w-12 h-12 md:w-16 md:h-16 bg-white border-4 border-black rounded-full flex items-center justify-center flex-shrink-0">
+                        <div class="w-8 h-8 md:w-12 md:h-12 led-blue rounded-full border-2 border-black"></div>
                     </div>
                     <div class="w-6 h-6 led-red rounded-full border-2 border-black"></div>
                     <div class="w-6 h-6 led-yellow rounded-full border-2 border-black"></div>
                     <div class="w-6 h-6 led-green rounded-full border-2 border-black"></div>
                 </div>
-                <div class="screen-bezel flex-grow">
+                <div class="screen-bezel flex-grow min-h-[300px]">
                     <div id="screen" class="w-full h-full bg-black rounded-lg shadow-inner p-4 border-2 border-gray-600 flex flex-col relative screen-glow">
                         <div id="loading-state" class="flex flex-col items-center justify-center h-full text-center text-cyan-300 z-20">
                             <p class="text-xl font-bold">LOADING<span class="blinking-cursor">...</span></p>
-                            <p class="text-sm mt-2">ACCESSING DATABASE...</p>
                         </div>
                         <div id="error-state" class="hidden flex-col items-center justify-center h-full text-center text-red-400 z-20">
                             <p class="text-xl font-bold">ERROR!</p>
-                            <p class="text-sm mt-2">SUBJECT NOT FOUND. CHECK INPUT.</p>
+                            <p class="text-sm mt-2">SUBJECT NOT FOUND.</p>
                         </div>
                         <div id="main-content" class="hidden flex-grow flex-col z-20 content-fade">
                             <div class="flex justify-between items-center bg-gray-900/50 text-cyan-300 px-3 py-1 rounded-t-md">
-                                <h2 id="pokemon-name" class="text-xl font-bold capitalize pixel-font"></h2>
-                                <span id="pokemon-id" class="text-lg font-bold"></span>
+                                <h2 id="pokemon-name" class="text-lg sm:text-xl font-bold capitalize pixel-font"></h2>
+                                <span id="pokemon-id" class="text-base sm:text-lg font-bold"></span>
                             </div>
                             <div class="bg-gray-800/50 p-4 flex-grow flex flex-col items-center justify-center relative overflow-hidden">
-                                <img id="pokemon-image" src="" alt="Pokemon Image" class="h-40 md:h-48 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-transform duration-300 hover:scale-110">
+                                <img id="pokemon-image" src="" alt="Pokemon Image" class="h-32 sm:h-40 md:h-48 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-transform duration-300 hover:scale-110">
                             </div>
                         </div>
                     </div>
@@ -194,11 +191,11 @@
                     </div>
                 </div>
             </div>
-            <div class="w-full md:w-8 pokedex-hinge border-y-4 border-black/50"></div>
-            <div class="w-full md:w-1/2 p-4 flex flex-col bg-red-700/80 rounded-r-lg border-l-4 border-black/50">
+            <div class="pokedex-hinge w-full h-8 md:w-8 md:h-auto border-y-4 md:border-y-0 md:border-x-4 border-black/50"></div>
+            <div class="w-full md:w-1/2 p-4 flex flex-col bg-red-700/80 rounded-r-lg">
                 <div id="info-screen" class="w-full h-full bg-gray-900 rounded-lg p-4 border-2 border-cyan-400/50 flex flex-col gap-4 text-cyan-300 font-mono text-sm shadow-[0_0_15px_rgba(0,255,255,0.3)]">
                     <div class="relative"><input type="text" id="search-input" placeholder="SUBJECT ID OR NAME..." class="w-full bg-gray-800 border-2 border-cyan-400/50 rounded-md p-2 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300 placeholder-cyan-500/50 uppercase tracking-wider"><button id="search-btn" class="absolute right-2 top-1/2 -translate-y-1/2 bg-cyan-500 text-black px-3 py-1 rounded active:bg-cyan-700 font-bold">EXECUTE</button></div>
-                    <div id="pokemon-info" class="bg-black/30 p-3 rounded-md overflow-y-auto h-full flex flex-col content-fade">
+                    <div id="pokemon-info" class="bg-black/30 p-3 rounded-md overflow-y-auto h-[400px] md:h-full flex flex-col content-fade">
                         <div id="types-container" class="flex gap-2 mb-2"></div>
                         <div id="physical-info" class="grid grid-cols-2 gap-2 mb-2"></div>
                         <div id="stats-chart-container" class="w-full h-48 my-2"></div>
@@ -215,40 +212,40 @@
         </main>
     </div>
 
-    <div id="game-app" class="hidden w-full h-full flex items-center justify-center">
-         <main class="w-full max-w-4xl h-full max-h-[800px] md:max-h-[700px] bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-2xl flex flex-col md:flex-row overflow-hidden border-4 border-gray-900/50">
-            <div class="w-full md:w-1/2 p-4 flex flex-col bg-gray-700/80 rounded-l-lg border-r-4 border-black/50">
+    <div id="game-app" class="hidden w-full max-w-4xl">
+         <main class="w-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-2xl flex flex-col md:flex-row overflow-hidden border-4 border-gray-900/50 my-8">
+            <div class="w-full md:w-1/2 p-4 flex flex-col bg-gray-700/80 rounded-l-lg">
                 <div class="flex items-center space-x-2 mb-4">
-                    <div class="w-16 h-16 bg-white border-4 border-black rounded-full flex items-center justify-center"><div class="w-12 h-12 led-blue rounded-full border-2 border-black"></div></div>
-                    <h2 class="text-2xl text-cyan-300 pixel-font">SHADOW SHOWDOWN</h2>
+                    <div class="w-12 h-12 md:w-16 md:h-16 bg-white border-4 border-black rounded-full flex items-center justify-center flex-shrink-0"><div class="w-8 h-8 md:w-12 md:h-12 led-blue rounded-full border-2 border-black"></div></div>
+                    <h2 class="text-xl md:text-2xl text-cyan-300 pixel-font">SHADOW SHOWDOWN</h2>
                 </div>
-                <div class="screen-bezel flex-grow">
+                <div class="screen-bezel flex-grow min-h-[300px]">
                     <div id="game-screen" class="w-full h-full bg-black rounded-lg shadow-inner p-4 border-2 border-gray-600 flex flex-col relative screen-glow items-center justify-center">
-                        <img id="game-pokemon-image" src="" alt="Who's that Pokemon?" class="h-48 md:h-64 transition-all duration-500">
+                        <img id="game-pokemon-image" src="" alt="Who's that Pokemon?" class="h-40 sm:h-48 md:h-64 transition-all duration-500">
                     </div>
                 </div>
                 <div class="mt-4 flex items-center justify-between">
                      <button class="back-to-menu-btn bg-gray-700 text-cyan-300 font-bold py-2 px-4 rounded-md border-2 border-black active:bg-gray-600">MENU</button>
-                     <p id="game-feedback" class="text-xl pixel-font"></p>
+                     <p id="game-feedback" class="text-base md:text-xl pixel-font text-center"></p>
                 </div>
             </div>
-            <div class="w-full md:w-8 pokedex-hinge border-y-4 border-black/50"></div>
-            <div class="w-full md:w-1/2 p-4 flex flex-col bg-gray-700/80 rounded-r-lg border-l-4 border-black/50">
+            <div class="pokedex-hinge w-full h-8 md:w-8 md:h-auto border-y-4 md:border-y-0 md:border-x-4 border-black/50"></div>
+            <div class="w-full md:w-1/2 p-4 flex flex-col bg-gray-700/80 rounded-r-lg">
                 <div class="w-full h-full bg-gray-900 rounded-lg p-4 border-2 border-cyan-400/50 flex flex-col gap-4 text-cyan-300 font-mono text-sm shadow-[0_0_15px_rgba(0,255,255,0.3)]">
                     <div class="flex justify-between items-center text-center">
-                        <h3 class="text-sm">SCORE: <span id="game-score" class="font-bold text-xl">0</span></h3>
-                        <h3 class="text-sm">HIGH SCORE: <span id="game-high-score" class="font-bold text-xl">0</span></h3>
+                        <h3 class="text-xs sm:text-sm">SCORE: <span id="game-score" class="font-bold text-lg sm:text-xl">0</span></h3>
+                        <h3 class="text-xs sm:text-sm">HIGH SCORE: <span id="game-high-score" class="font-bold text-lg sm:text-xl">0</span></h3>
                     </div>
                     <div id="game-instructions" class="text-center bg-black/30 p-3 rounded-md">
-                        <p class="text-2xl font-bold pixel-font text-cyan-300">WHO'S THAT POKéMON?</p>
-                        <p class="mt-2">GUESS THE POKéMON FROM ITS SILHOUETTE.</p>
+                        <p class="text-lg md:text-2xl font-bold pixel-font text-cyan-300">WHO'S THAT POKéMON?</p>
+                        <p class="mt-2 text-xs md:text-sm">GUESS THE POKéMON FROM ITS SILHOUETTE.</p>
                     </div>
                     <div id="game-options" class="grid grid-cols-2 gap-4 flex-grow content-center">
                     </div>
-                     <div class="flex gap-2 justify-center">
-                        <button id="read-more-btn" class="hidden w-1/2 bg-indigo-500 text-white font-bold py-2 px-4 rounded-md border-2 border-black active:bg-indigo-600 text-xs">POKéDEX ENTRY</button>
-                        <button id="next-round-btn" class="hidden w-1/2 bg-yellow-500 text-black font-bold py-2 px-4 rounded-md border-2 border-black active:bg-yellow-600 text-xs">NEXT ROUND</button>
-                        <button id="new-game-btn" class="w-1/2 bg-cyan-500 text-black font-bold py-2 px-4 rounded-md border-2 border-black active:bg-cyan-700">NEW GAME</button>
+                     <div class="flex flex-col sm:flex-row gap-2 justify-center">
+                        <button id="read-more-btn" class="hidden w-full sm:w-1/2 bg-indigo-500 text-white font-bold py-2 px-4 rounded-md border-2 border-black active:bg-indigo-600 text-xs">POKéDEX ENTRY</button>
+                        <button id="next-round-btn" class="hidden w-full sm:w-1/2 bg-yellow-500 text-black font-bold py-2 px-4 rounded-md border-2 border-black active:bg-yellow-600 text-xs">NEXT ROUND</button>
+                        <button id="new-game-btn" class="w-full sm:w-1/2 bg-cyan-500 text-black font-bold py-2 px-4 rounded-md border-2 border-black active:bg-cyan-700">NEW GAME</button>
                     </div>
                 </div>
             </div>
@@ -270,6 +267,7 @@
                 pokedexApp.classList.add('hidden');
                 gameApp.classList.add('hidden');
                 page.classList.remove('hidden');
+                window.scrollTo(0, 0);
             };
             
             openPokedexBtn.addEventListener('click', () => {
@@ -580,4 +578,3 @@
     </script>
 </body>
 </html>
-
